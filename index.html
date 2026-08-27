@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ellie's Adventure Quest — Student Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A5B;
+    --navy-deep:#101B3D;
+    --pink:#E31C79;
+    --pink-soft:#FDE5F0;
+    --blue:#2E6FDB;
+    --blue-soft:#E7EEFD;
+    --gold:#FFC94D;
+    --gold-soft:#FFF3D9;
+    --cream:#FBFAF7;
+    --mist:#F2F4FA;
+    --ink:#1B2A5B;
+    --ink-soft:#5B6482;
+    --line:#DFE3F0;
+    --radius:18px;
+    --display: 'Baloo 2', system-ui, sans-serif;
+    --body: 'Nunito Sans', system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; font-family:var(--body); color:var(--ink); background:var(--cream);
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{font-family:var(--display); font-weight:700; letter-spacing:-0.01em;}
+  a{color:inherit;}
+  img{max-width:100%;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+
+  /* ---------- sticky track bar ---------- */
+  .trackbar{
+    position:sticky; top:0; z-index:50;
+    background:rgba(27,42,91,0.97); backdrop-filter:blur(6px);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  .trackbar-inner{
+    max-width:1080px; margin:0 auto; padding:10px 24px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  }
+  .trackbar-label{
+    color:#AEB8E0; font-size:13px; font-weight:700; text-transform:uppercase;
+    letter-spacing:0.06em; white-space:nowrap;
+  }
+  .track-pills{display:flex; gap:8px; flex-wrap:wrap;}
+  .pill{
+    appearance:none; border:1.5px solid rgba(255,255,255,0.25); background:transparent;
+    color:#EAEDF9; font-family:var(--body); font-weight:700; font-size:13.5px;
+    padding:7px 14px; border-radius:999px; cursor:pointer; transition:all .15s ease;
+  }
+  .pill:hover{border-color:rgba(255,255,255,0.6);}
+  .pill[aria-pressed="true"]{background:var(--pink); border-color:var(--pink); color:white;}
+  .pill.all[aria-pressed="true"]{background:var(--gold); border-color:var(--gold); color:var(--navy-deep);}
+
+  /* ---------- hero ---------- */
+  .hero{
+    background:radial-gradient(120% 140% at 15% -10%, #2A3E82 0%, var(--navy) 45%, var(--navy-deep) 100%);
+    color:white; padding:64px 0 80px; position:relative; overflow:hidden;
+  }
+  .hero::after{
+    content:""; position:absolute; right:-120px; top:-120px; width:420px; height:420px;
+    border-radius:50%; background:radial-gradient(circle, rgba(227,28,121,0.35), transparent 70%);
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; font-size:13px; font-weight:800;
+    color:var(--gold); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:18px;
+  }
+  .eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--gold);}
+  .hero h1{font-size:clamp(34px,6vw,58px); line-height:1.03; margin:0 0 18px; position:relative;}
+  .hero h1 span{color:var(--pink);}
+  .hero p.lede{
+    font-family:var(--body); font-size:18px; line-height:1.55; color:#C9D0EE;
+    max-width:560px; margin:0 0 30px; position:relative;
+  }
+  .hero-meta{display:flex; gap:28px; flex-wrap:wrap; position:relative;}
+  .hero-meta div{font-family:var(--body);}
+  .hero-meta .num{font-family:var(--display); font-size:26px; font-weight:800; color:white; display:block;}
+  .hero-meta .lbl{font-size:12.5px; color:#9AA4CC; text-transform:uppercase; letter-spacing:0.08em;}
+
+  /* ---------- path chooser ---------- */
+  .paths{padding:56px 0 20px;}
+  .paths h2{font-size:28px; margin:0 0 6px;}
+  .paths .sub{color:var(--ink-soft); margin:0 0 28px; font-size:15.5px;}
+  .path-cards{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+  .path-card{
+    border:2px solid var(--line); border-radius:var(--radius); padding:22px;
+    background:white; cursor:pointer; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    text-align:left;
+  }
+  .path-card:hover{transform:translateY(-3px); box-shadow:0 10px 24px rgba(27,42,91,0.08);}
+  .path-card[data-active="true"]{border-color:var(--track-color); box-shadow:0 10px 28px rgba(27,42,91,0.12);}
+  .path-card .icon{
+    width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+    margin-bottom:14px; font-family:var(--display); font-weight:800; font-size:18px; color:white;
+  }
+  .path-card h3{font-size:19px; margin:0 0 4px;}
+  .path-card .age{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--ink-soft); margin-bottom:10px; display:block;}
+  .path-card p{font-size:14.5px; line-height:1.5; color:var(--ink-soft); margin:0;}
+  .path-a .icon{background:var(--pink);} .path-a{--track-color:var(--pink);}
+  .path-b .icon{background:var(--blue);} .path-b{--track-color:var(--blue);}
+  .path-c .icon{background:var(--navy);} .path-c{--track-color:var(--navy);}
+
+  /* ---------- timeline ---------- */
+  .phase{padding:52px 0;}
+  .phase.p1{background:var(--blue-soft);}
+  .phase.p2{background:var(--pink-soft);}
+  .phase.p3{background:var(--gold-soft);}
+  .phase.p4{background:var(--navy); color:white;}
+  .phase-head{display:flex; align-items:baseline; gap:12px; margin-bottom:28px; flex-wrap:wrap;}
+  .phase-head .tag{
+    font-family:var(--display); font-weight:800; font-size:13px; padding:5px 12px;
+    border-radius:999px; background:white; color:var(--navy);
+  }
+  .phase.p4 .phase-head .tag{background:var(--gold); color:var(--navy-deep);}
+  .phase-head h2{font-size:24px; margin:0;}
+  .phase-head .range{font-size:14px; color:var(--ink-soft); font-weight:700;}
+  .phase.p4 .phase-head .range{color:#B9C2E8;}
+
+  .trail{position:relative; padding-left:38px;}
+  .trail::before{
+    content:""; position:absolute; left:13px; top:6px; bottom:6px; width:2px;
+    background:repeating-linear-gradient(to bottom, currentColor 0 6px, transparent 6px 12px);
+    opacity:.35;
+  }
+  .week{position:relative; margin-bottom:14px;}
+  .week:last-child{margin-bottom:0;}
+  .week-track{position:absolute; left:-38px; top:2px; width:28px; height:28px; border-radius:50%;
+    background:white; border:2px solid currentColor; display:flex; align-items:center; justify-content:center;
+    font-family:var(--display); font-weight:800; font-size:12.5px;}
+  .phase.p4 .week-track{background:var(--navy-deep);}
+
+  .week-card{
+    background:white; border-radius:14px; border:1px solid var(--line);
+    padding:16px 18px; cursor:pointer;
+  }
+  .phase.p4 .week-card{background:#182655; border-color:rgba(255,255,255,0.12);}
+  .week-top{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .week-top-left{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .week-num{font-family:var(--display); font-weight:800; font-size:15px;}
+  .week-date{font-size:12.5px; color:var(--ink-soft); font-weight:700;}
+  .phase.p4 .week-date{color:#9AA4CC;}
+  .week-theme{font-family:var(--display); font-weight:700; font-size:15.5px; color:var(--track-color, var(--navy));}
+  .phase.p4 .week-theme{color:var(--gold);}
+  .caret{font-size:13px; color:var(--ink-soft); transition:transform .15s ease;}
+  .week.open .caret{transform:rotate(180deg);}
+  .phase.p4 .caret{color:#9AA4CC;}
+
+  .week-body{display:none; margin-top:12px; padding-top:12px; border-top:1px dashed var(--line);}
+  .phase.p4 .week-body{border-top-color:rgba(255,255,255,0.15);}
+  .week.open .week-body{display:block;}
+  .week-goal{font-size:13.5px; font-style:italic; color:var(--ink-soft); margin:0 0 10px;}
+  .phase.p4 .week-goal{color:#B9C2E8;}
+  .task{
+    display:none; font-size:14.5px; line-height:1.55; background:var(--mist);
+    border-radius:10px; padding:12px 14px; border-left:4px solid var(--track-color, var(--pink));
+  }
+  .phase.p4 .task{background:rgba(255,255,255,0.06);}
+  .track-badge{
+    display:inline-block; font-family:var(--display); font-weight:800; font-size:11.5px;
+    text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px; color:var(--track-color);
+  }
+  .done-check{
+    display:flex; align-items:center; gap:7px; margin-top:12px; font-size:13px; font-weight:700;
+    color:var(--ink-soft); cursor:pointer; user-select:none;
+  }
+  .phase.p4 .done-check{color:#B9C2E8;}
+  .done-check input{width:16px; height:16px; accent-color:var(--pink);}
+
+  /* per-track visibility, controlled by [data-track] on <body> */
+  body[data-track="a"] .task.a, body[data-track="b"] .task.b, body[data-track="c"] .task.c{display:block;}
+  body[data-track="all"] .task{display:block; margin-bottom:8px;}
+  body[data-track="all"] .task:last-child{margin-bottom:0;}
+
+  /* ---------- showcase callout ---------- */
+  .showcase-box{
+    margin-top:30px; padding:26px; border-radius:16px; background:linear-gradient(135deg, rgba(227,28,121,0.18), rgba(255,201,77,0.12));
+    border:1.5px solid rgba(255,201,77,0.4); text-align:center;
+  }
+  .showcase-box .trophy{font-size:30px; margin-bottom:8px;}
+  .showcase-box h3{font-family:var(--display); font-size:20px; margin:0 0 8px; color:var(--gold);}
+  .showcase-box p{font-size:14.5px; color:#D7DCF4; max-width:480px; margin:0 auto; line-height:1.6;}
+
+  /* ---------- tools ---------- */
+  .tools{padding:56px 0;}
+  .tools h2{font-size:24px; margin:0 0 6px;}
+  .tools .sub{color:var(--ink-soft); margin:0 0 26px; font-size:15px;}
+  .tool-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  .tool-card{
+    display:flex; flex-direction:column; gap:10px; padding:18px; border-radius:14px;
+    border:1px solid var(--line); background:white; text-decoration:none; color:var(--ink);
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .tool-card:hover{transform:translateY(-3px); box-shadow:0 10px 22px rgba(27,42,91,0.08);}
+  .tool-card .tname{font-family:var(--display); font-weight:700; font-size:15.5px;}
+  .tool-card .tdesc{font-size:13px; color:var(--ink-soft); line-height:1.45;}
+  .tool-card .tgo{font-size:12.5px; font-weight:800; color:var(--pink); margin-top:auto;}
+
+  footer{background:var(--navy-deep); color:#AEB8E0; padding:34px 0; font-size:13.5px;}
+  footer .wrap{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;}
+  footer strong{color:white; font-family:var(--display);}
+  footer a{color:var(--gold); text-decoration:none; font-weight:700;}
+
+  @media (max-width:760px){
+    .path-cards{grid-template-columns:1fr;}
+    .tool-grid{grid-template-columns:repeat(2,1fr);}
+    .trackbar-inner{justify-content:center; text-align:center;}
+  }
+</style>
+</head>
+<body data-track="all">
+
+  <div class="trackbar">
+    <div class="trackbar-inner">
+      <span class="trackbar-label">Your path:</span>
+      <div class="track-pills">
+        <button class="pill all" data-track="all" aria-pressed="true">Show everything</button>
+        <button class="pill" data-track="a" aria-pressed="false">🩷 Explorer (Scratch)</button>
+        <button class="pill" data-track="b" aria-pressed="false">💙 Coder (Python/JS)</button>
+        <button class="pill" data-track="c" aria-pressed="false">🔷 Builder (Web App)</button>
+      </div>
+    </div>
+  </div>
+
+  <header class="hero">
+    <div class="wrap">
+      <div class="eyebrow"><span class="dot"></span> Ellie's FutureMinds Academy</div>
+      <h1>Ellie's <span>Adventure</span><br>Quest</h1>
+      <p class="lede">A 14-week build. You'll create your own interactive story starring Ellie — where every choice you code changes what happens next. Pick your path below, follow the trail week by week, and get ready to show your family a project only you built.</p>
+      <div class="hero-meta">
+        <div><span class="num">14</span><span class="lbl">Weekly missions</span></div>
+        <div><span class="num">Aug 22</span><span class="lbl">Quest begins</span></div>
+        <div><span class="num">Nov 21</span><span class="lbl">Family showcase</span></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="paths">
+    <div class="wrap">
+      <h2>Choose your path</h2>
+      <p class="sub">Every path builds the same Ellie story — just with different tools. Tap a card to set it as your path (it'll stick as you scroll).</p>
+      <div class="path-cards">
+        <button class="path-card path-a" data-select="a">
+          <div class="icon">A</div>
+          <span class="age">Ages 7–10</span>
+          <h3>Explorer</h3>
+          <p>Build with Scratch — drag-and-drop blocks, sprites, and sound. No typing code required.</p>
+        </button>
+        <button class="path-card path-b" data-select="b">
+          <div class="icon">B</div>
+          <span class="age">Ages 11–14</span>
+          <h3>Coder</h3>
+          <p>Build with Python or JavaScript — write real code with variables, loops, and logic.</p>
+        </button>
+        <button class="path-card path-c" data-select="c">
+          <div class="icon">C</div>
+          <span class="age">Ages 15+</span>
+          <h3>Builder</h3>
+          <p>Build a real website — HTML, CSS, and JavaScript, hosted with your own live link.</p>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHASE 1 -->
+  <section class="phase p1" id="phase1">
+    <div class="wrap">
+      <div class="phase-head">
+        <span class="tag">Phase 1</span>
+        <h2>Foundations</h2>
+        <span class="range">Weeks 1–3 · Aug 22 – Sep 5</span>
+      </div>
+      <div class="trail" id="trail-1"></div>
+    </div>
+  </section>
+
+  <!-- PHASE 2 -->
+  <section class="phase p2" id="phase2">
+    <div class="wrap">
+      <div class="phase-head">
+        <span class="tag">Phase 2</span>
+        <h2>Core Mechanics</h2>
+        <span class="range">Weeks 4–7 · Sep 12 – Oct 3</span>
+      </div>
+      <div class="trail" id="trail-2"></div>
+    </div>
+  </section>
+
+  <!-- PHASE 3 -->
+  <section class="phase p3" id="phase3">
+    <div class="wrap">
+      <div class="phase-head">
+        <span class="tag">Phase 3</span>
+        <h2>Polish &amp; Personality</h2>
+        <span class="range">Weeks 8–11 · Oct 10 – Oct 31</span>
+      </div>
+      <div class="trail" id="trail-3"></div>
+    </div>
+  </section>
+
+  <!-- PHASE 4 -->
+  <section class="phase p4" id="phase4">
+    <div class="wrap">
+      <div class="phase-head">
+        <span class="tag">Phase 4</span>
+        <h2>Showcase Prep</h2>
+        <span class="range">Weeks 12–14 · Nov 7 – Nov 21</span>
+      </div>
+      <div class="trail" id="trail-4"></div>
+
+      <div class="showcase-box">
+        <div class="trophy">🏆</div>
+        <h3>Family Showcase — Saturday, November 21</h3>
+        <p>You'll demo your finished Ellie adventure live for your family and answer their questions about how you built it. This is what every week has been leading to — come ready to show it off.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tools">
+    <div class="wrap">
+      <h2>Your quest tools</h2>
+      <p class="sub">Bookmark these — you'll use them every week.</p>
+      <div class="tool-grid">
+        <a class="tool-card" href="https://scratch.mit.edu" target="_blank" rel="noopener">
+          <span class="tname">Scratch</span>
+          <span class="tdesc">Explorer path — build and save your project here.</span>
+          <span class="tgo">Open Scratch →</span>
+        </a>
+        <a class="tool-card" href="https://replit.com" target="_blank" rel="noopener">
+          <span class="tname">Replit</span>
+          <span class="tdesc">Coder path — write and run your Python/JS here.</span>
+          <span class="tgo">Open Replit →</span>
+        </a>
+        <a class="tool-card" href="https://github.com" target="_blank" rel="noopener">
+          <span class="tname">GitHub</span>
+          <span class="tdesc">Builder path — save your code and publish your site.</span>
+          <span class="tgo">Open GitHub →</span>
+        </a>
+        <a class="tool-card" href="https://elliesfuturemindsacademy.com" target="_blank" rel="noopener">
+          <span class="tname">Academy Site</span>
+          <span class="tdesc">Class schedule, announcements, and enrollment info.</span>
+          <span class="tgo">Visit site →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div><strong>Ellie's FutureMinds Academy</strong> — Where Tomorrow's Innovators Begin</div>
+      <div><a href="https://elliesfuturemindsacademy.com" target="_blank" rel="noopener">elliesfuturemindsacademy.com</a></div>
+    </div>
+  </footer>
+
+<script>
+const WEEKS = [
+  {n:1, date:"Sat, Aug 22", theme:"Meet the Tools & Sketch the Story", goal:"Get comfortable in your tool and plan your adventure on paper first.",
+    a:"Explore the Scratch editor. Storyboard 3 scenes on paper: Ellie discovers a mysterious code lab.",
+    b:"Set up your Replit account. Write a pseudocode outline for your story's branches.",
+    c:"Set up your code editor and GitHub repo. Sketch your site's page flow."},
+  {n:2, date:"Sat, Aug 29", theme:"Build the Opening Scene", goal:"Get a playable opening scene running with one real choice in it.",
+    a:"Build your opening scene with Ellie's sprite, a background, and a 2-option choice using broadcast blocks.",
+    b:"Write your opening scene as a function. Use input() to capture the player's first choice.",
+    c:"Build your landing/opening screen in HTML/CSS. Wire up your first choice with a JS event listener."},
+  {n:3, date:"Fri, Sep 5", theme:"Second Branch + Simple Scoring", goal:"Add a second decision point and a way to track progress.",
+    a:"Add a second choice scene. Introduce a score variable and show it on screen.",
+    b:"Add a second branch using if/elif logic. Track a score or inventory list.",
+    c:"Add a second page or route. Introduce a JS object to track your player's state."},
+  {n:4, date:"Sat, Sep 12", theme:"Variables & State", goal:"Track what Ellie has learned or collected as the story goes on.",
+    a:"Use variables to track items you've collected. Display an inventory list on stage.",
+    b:"Use a dictionary or list to track inventory. Print it back to the player.",
+    c:"Use an array or object in your JS state to track inventory. Render it to the page."},
+  {n:5, date:"Sat, Sep 19", theme:"Loops & a Puzzle Room", goal:"Add a repeatable challenge scene using loops.",
+    a:"Build a 'puzzle room' scene using a repeat block — try catching 5 falling code-blocks.",
+    b:"Write a while-loop puzzle, like guess-the-number to unlock a door.",
+    c:"Build a timed or repeating mini-challenge using setInterval or a loop."},
+  {n:6, date:"Sat, Sep 26", theme:"Conditionals & Consequences", goal:"Make your earlier choices affect what happens later.",
+    a:"Use if/else blocks so an earlier choice changes what happens in this scene.",
+    b:"Use conditionals to branch based on the inventory or score from earlier choices.",
+    c:"Use conditional rendering so earlier choices change later page content."},
+  {n:7, date:"Sat, Oct 3", theme:"Mid-Project Demo Day", goal:"Show your family a rough, playable version — it's okay if it's not finished!",
+    a:"Present a playable 3–4 scene demo to a partner or a visiting parent.",
+    b:"Present a playable text-adventure demo. Take notes on feedback.",
+    c:"Present a playable multi-page demo. Take notes on feedback."},
+  {n:8, date:"Sat, Oct 10", theme:"Custom Art, Sound & Animation", goal:"Make your Ellie adventure feel like yours.",
+    a:"Add custom backdrops, sound effects, and simple sprite animations.",
+    b:"Add ASCII art or text styling/color to make your console experience feel custom.",
+    c:"Add custom CSS styling, transitions, and sound effects."},
+  {n:9, date:"Sat, Oct 17", theme:"Mini-Game Moment", goal:"Add a standalone mini-game inside your adventure.",
+    a:"Build a quiz or memory-match mini-game triggered from your main story.",
+    b:"Build a quiz function or simple memory-match logic triggered mid-story.",
+    c:"Build a small interactive mini-game component (quiz or memory match) as a page."},
+  {n:10, date:"Sat, Oct 24", theme:"Playtesting & Bug Hunt", goal:"Trade projects with a partner and hunt for bugs together.",
+    a:"Partner playtest. Log at least 2 bugs or suggestions for your partner.",
+    b:"Partner playtest. Log bugs and edge cases, like what happens with bad input.",
+    c:"Partner playtest across a couple of screen sizes. Log bugs and layout issues."},
+  {n:11, date:"Sat, Oct 31", theme:"Halloween Bonus Branch", goal:"Add a spooky optional branch as a fun seasonal twist.",
+    a:"Add a hidden spooky scene unlocked by a secret choice.",
+    b:"Add a hidden easter-egg branch triggered by an unusual input.",
+    c:"Add a hidden route or a seasonal theme toggle."},
+  {n:12, date:"Sat, Nov 7", theme:"Title Screen & Credits", goal:"Give your project a finished, professional feel.",
+    a:"Add a title screen and a credits scene: 'Built by [Your Name] with Ellie.'",
+    b:"Add a title banner and a credits function at the start or end of your program.",
+    c:"Add a title/landing page and a credits section or page."},
+  {n:13, date:"Sat, Nov 14", theme:"Full Rehearsal", goal:"Present your build start to finish in under 2 minutes.",
+    a:"Full run-through presentation, 2 minutes, with peer feedback.",
+    b:"Full run-through presentation, 2 minutes, with peer feedback.",
+    c:"Full run-through presentation, 2 minutes, with peer feedback."},
+  {n:14, date:"Sat, Nov 21", theme:"Family Showcase — Ellie's Adventure Quest Live!", goal:"Present your finished interactive adventure to your family.",
+    a:"Live demo for your family. Be ready to answer questions about how you built Ellie's story.",
+    b:"Live demo for your family. Be ready to answer questions about how you built Ellie's story.",
+    c:"Live demo for your family. Be ready to answer questions about how you built Ellie's story."},
+];
+
+const PHASES = { 1:[1,2,3], 2:[4,5,6,7], 3:[8,9,10,11], 4:[12,13,14] };
+
+function trackColor(t){ return t==="a" ? "var(--pink)" : t==="b" ? "var(--blue)" : "var(--navy)"; }
+function trackLabel(t){ return t==="a" ? "Explorer · Scratch" : t==="b" ? "Coder · Python/JS" : "Builder · Web App"; }
+
+function renderTrail(phaseNum){
+  const el = document.getElementById("trail-" + phaseNum);
+  const weekNums = PHASES[phaseNum];
+  el.innerHTML = weekNums.map(n => {
+    const w = WEEKS.find(x => x.n === n);
+    return `
+    <div class="week" data-week="${w.n}">
+      <div class="week-track">${w.n}</div>
+      <div class="week-card" data-toggle>
+        <div class="week-top">
+          <div class="week-top-left">
+            <span class="week-num">Week ${w.n}</span>
+            <span class="week-date">${w.date}</span>
+          </div>
+          <span class="caret">▾</span>
+        </div>
+        <div class="week-theme">${w.theme}</div>
+        <div class="week-body">
+          <p class="week-goal">${w.goal}</p>
+          <div class="task a" style="--track-color:${trackColor('a')}"><span class="track-badge" style="color:${trackColor('a')}">${trackLabel('a')}</span><br>${w.a}</div>
+          <div class="task b" style="--track-color:${trackColor('b')}"><span class="track-badge" style="color:${trackColor('b')}">${trackLabel('b')}</span><br>${w.b}</div>
+          <div class="task c" style="--track-color:${trackColor('c')}"><span class="track-badge" style="color:${trackColor('c')}">${trackLabel('c')}</span><br>${w.c}</div>
+          <label class="done-check">
+            <input type="checkbox" data-done="${w.n}"> Mark this week complete
+          </label>
+        </div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+[1,2,3,4].forEach(renderTrail);
+
+// accordion toggle
+document.querySelectorAll("[data-toggle]").forEach(card=>{
+  card.addEventListener("click", (e)=>{
+    if(e.target.matches('input[type="checkbox"]')) return;
+    card.closest(".week").classList.toggle("open");
+  });
+});
+
+// track selection: sticky pills + path cards both set the same state
+function setTrack(t){
+  document.body.setAttribute("data-track", t);
+  document.querySelectorAll(".pill").forEach(p=>p.setAttribute("aria-pressed", String(p.dataset.track===t)));
+  document.querySelectorAll(".path-card").forEach(c=>c.setAttribute("data-active", String(c.dataset.select===t)));
+  try{ localStorage.setItem("ellieQuestTrack", t); }catch(e){}
+}
+document.querySelectorAll(".pill").forEach(p=>{
+  p.addEventListener("click", ()=> setTrack(p.dataset.track));
+});
+document.querySelectorAll(".path-card").forEach(c=>{
+  c.addEventListener("click", ()=> setTrack(c.dataset.select));
+});
+
+// restore saved track + completed weeks
+try{
+  const saved = localStorage.getItem("ellieQuestTrack");
+  if(saved) setTrack(saved);
+}catch(e){}
+
+document.querySelectorAll("[data-done]").forEach(cb=>{
+  const key = "ellieQuestDone_" + cb.dataset.done;
+  try{ cb.checked = localStorage.getItem(key) === "1"; }catch(e){}
+  cb.addEventListener("change", ()=>{
+    try{ localStorage.setItem(key, cb.checked ? "1" : "0"); }catch(e){}
+  });
+});
+</script>
+</body>
+</html>
