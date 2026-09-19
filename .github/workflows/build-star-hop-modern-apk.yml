@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p /tmp/starhop-src star-hop-android-modern/app/src/main/assets
-          cat star-hop-android-modern/source.part*.b64 > /tmp/starhop.b64
+          cat             star-hop-android-modern/source.part00.b64             star-hop-android-modern/source.part01.b64             star-hop-android-modern/source.part02.b64             star-hop-android-modern/source.part03a.b64             star-hop-android-modern/source.part03b.b64             star-hop-android-modern/source.part03c.b64             star-hop-android-modern/source.part03d.b64             star-hop-android-modern/source.part04.b64             star-hop-android-modern/source.part05.b64             star-hop-android-modern/source.part06.b64             star-hop-android-modern/source.part07.b64             star-hop-android-modern/source.part08.b64             > /tmp/starhop.b64
           base64 -d /tmp/starhop.b64 > /tmp/starhop.zip
           echo "05493927474a6ae2fbbb0f041400607aec414d2954a8bba9b4e94e41b5d2ba72  /tmp/starhop.zip" | sha256sum -c -
           unzip -q /tmp/starhop.zip -d /tmp/starhop-src
