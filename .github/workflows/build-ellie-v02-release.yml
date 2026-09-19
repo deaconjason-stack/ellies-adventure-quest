@@ -1,0 +1,109 @@
+name: Build Ellie v0.2 Cross-Platform Release
+on:
+  push:
+    branches: [ living-future-build ]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack Ellie v0.2
+        run: |
+          rm -rf living-future
+          mkdir living-future
+          unzip -q living-future-build/ELLIE-The-Living-Future-v0.2-release-source.zip -d living-future
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Add and sync Android
+        working-directory: living-future
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Build APK and release AAB
+        working-directory: living-future/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug bundleRelease
+      - name: Collect Android artifacts
+        shell: bash
+        run: |
+          cp living-future/android/app/build/outputs/apk/debug/app-debug.apk ELLIE-The-Living-Future-v0.2-Android.apk
+          cp living-future/android/app/build/outputs/bundle/release/app-release.aab ELLIE-The-Living-Future-v0.2-unsigned.aab
+          sha256sum ELLIE-The-Living-Future-v0.2-Android.apk ELLIE-The-Living-Future-v0.2-unsigned.aab > ELLIE-v0.2-Android.sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ELLIE-v0.2-Android
+          path: |
+            ELLIE-The-Living-Future-v0.2-Android.apk
+            ELLIE-The-Living-Future-v0.2-unsigned.aab
+            ELLIE-v0.2-Android.sha256.txt
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack Ellie v0.2
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force living-future -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path living-future | Out-Null
+          Expand-Archive -Path living-future-build/ELLIE-The-Living-Future-v0.2-release-source.zip -DestinationPath living-future -Force
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Build Windows EXE
+        working-directory: living-future
+        run: npm run build:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ELLIE-v0.2-Windows
+          path: living-future/dist/ELLIE-The-Living-Future-0.2.0-Windows-x64.exe
+          if-no-files-found: error
+
+  ios-compile-check:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack Ellie v0.2
+        run: |
+          rm -rf living-future
+          mkdir living-future
+          unzip -q living-future-build/ELLIE-The-Living-Future-v0.2-release-source.zip -d living-future
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Add and sync iOS
+        working-directory: living-future
+        run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Compile for iPhone Simulator
+        working-directory: living-future/ios
+        run: |
+          xcodebuild -workspace App/App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
