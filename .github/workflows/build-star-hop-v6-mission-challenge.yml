@@ -1,0 +1,79 @@
+name: Build Star Hop v6 Mission Challenge
+
+on:
+  push:
+    branches: [ star-hop-v6-mission-challenge-apk ]
+    paths:
+      - 'star-hop-v6/**'
+      - 'star-hop-v6-android/**'
+      - '.github/workflows/build-star-hop-v6-mission-challenge.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Reassemble and verify v6 game
+        shell: bash
+        run: |
+          mkdir -p star-hop-v6-android/app/src/main/assets
+          cat star-hop-v6/source.part*.b64gz > /tmp/starhop-v6.b64
+          base64 -d /tmp/starhop-v6.b64 > /tmp/starhop-v6.html.gz
+          gzip -dc /tmp/starhop-v6.html.gz > star-hop-v6-android/app/src/main/assets/starhop-v6.html
+          echo "4bc9712a4ed8cd451d14e3877e869b4310ffbd91a6f0a87f4c2865294844f39c  star-hop-v6-android/app/src/main/assets/starhop-v6.html" | sha256sum -c -
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s = Path("star-hop-v6-android/app/src/main/assets/starhop-v6.html").read_text(encoding="utf-8")
+          m = re.search(r"<script>([\s\S]*)</script>", s)
+          assert m, "Game script missing"
+          Path("/tmp/starhop-v6.js").write_text(m.group(1), encoding="utf-8")
+          PY
+          node --check /tmp/starhop-v6.js
+
+      - name: Build official Android APK
+        working-directory: star-hop-v6-android
+        run: gradle --no-daemon --stacktrace clean assembleDebug
+
+      - name: Verify modern APK
+        shell: bash
+        run: |
+          APK="star-hop-v6-android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/v6-badging.txt
+          grep "package: name='com.medisyncd.starhopmission'" /tmp/v6-badging.txt
+          grep "targetSdkVersion:'35'" /tmp/v6-badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          mkdir -p star-hop-v6-android/release
+          cp "$APK" star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.apk
+          sha256sum star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.apk > star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-StarHop-v6-Mission-Challenge
+          path: |
+            star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.apk
+            star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
