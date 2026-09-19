@@ -41,15 +41,18 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Unpack Ellie Star Hop v4
+      - name: Verify and unpack Ellie Star Hop v4
         run: |
-          mkdir -p app/src/main/assets
-          base64 -d star-hop-v4.zip.b64 > star-hop-v4.zip
+          cat archive-parts/part1.b64 archive-parts/part2.b64 archive-parts/part3.b64 archive-parts/part4.b64 > star-hop-v4.full.b64
+          test "$(wc -c < star-hop-v4.full.b64)" -eq 35440
+          base64 -d star-hop-v4.full.b64 > star-hop-v4.zip
+          echo "05493927474a6ae2fbbb0f041400607aec414d2954a8bba9b4e94e41b5d2ba72  star-hop-v4.zip" | sha256sum -c -
           rm -rf /tmp/ellie-starhop
-          mkdir -p /tmp/ellie-starhop
+          mkdir -p /tmp/ellie-starhop app/src/main/assets
           unzip -q star-hop-v4.zip -d /tmp/ellie-starhop
           cp -R /tmp/ellie-starhop/star-hop/. app/src/main/assets/
           test -f app/src/main/assets/index.html
+          test -f app/src/main/assets/ellie-starhop-icon.svg
 
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug
