@@ -1,2 +1,3 @@
 Build Ellie Star Hop v6 Mission Challenge
-Reason: slower pacing, unmistakable Ellie, clear hazards/rewards, multi-step mission gameplay, repair-gate actions, 3-star mastery.
+Trigger after registering workflow on main.
+Features: slower pacing; unmistakable Ellie; danger/reward clarity; action-gate mission completion; 1–3 mastery stars.
