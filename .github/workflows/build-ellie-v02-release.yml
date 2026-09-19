@@ -2,6 +2,9 @@ name: Build Ellie v0.2 Cross-Platform Release
 on:
   push:
     branches: [ living-future-build ]
+    paths:
+      - 'living-future-v02/**'
+      - '.github/workflows/build-ellie-v02-release.yml'
   workflow_dispatch:
 
 jobs:
@@ -10,11 +13,13 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack Ellie v0.2
+      - name: Reassemble and verify Ellie v0.2 source
         run: |
+          cat living-future-v02/source.part*.b64 | base64 -d > /tmp/ellie-v02.zip
+          echo "512d6a4c7df57f2529263bf47ab12c93562a2d1bfeba087359a9c642d617f1d1  /tmp/ellie-v02.zip" | sha256sum -c -
           rm -rf living-future
           mkdir living-future
-          unzip -q living-future-build/ELLIE-The-Living-Future-v0.2-release-source.zip -d living-future
+          unzip -q /tmp/ellie-v02.zip -d living-future
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -61,12 +66,18 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack Ellie v0.2
+      - name: Reassemble and verify Ellie v0.2 source
         shell: pwsh
         run: |
+          $parts = Get-ChildItem "living-future-v02/source.part*.b64" | Sort-Object Name
+          $b64 = ($parts | ForEach-Object { Get-Content $_.FullName -Raw }) -join ""
+          $bytes = [Convert]::FromBase64String($b64)
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\ellie-v02.zip", $bytes)
+          $hash = (Get-FileHash "$env:RUNNER_TEMP\ellie-v02.zip" -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "512d6a4c7df57f2529263bf47ab12c93562a2d1bfeba087359a9c642d617f1d1") { throw "Source hash mismatch" }
           Remove-Item -Recurse -Force living-future -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path living-future | Out-Null
-          Expand-Archive -Path living-future-build/ELLIE-The-Living-Future-v0.2-release-source.zip -DestinationPath living-future -Force
+          Expand-Archive -Path "$env:RUNNER_TEMP\ellie-v02.zip" -DestinationPath living-future -Force
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -87,11 +98,13 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack Ellie v0.2
+      - name: Reassemble and verify Ellie v0.2 source
         run: |
+          cat living-future-v02/source.part*.b64 | base64 -D > /tmp/ellie-v02.zip
+          echo "512d6a4c7df57f2529263bf47ab12c93562a2d1bfeba087359a9c642d617f1d1  /tmp/ellie-v02.zip" | shasum -a 256 -c -
           rm -rf living-future
           mkdir living-future
-          unzip -q living-future-build/ELLIE-The-Living-Future-v0.2-release-source.zip -d living-future
+          unzip -q /tmp/ellie-v02.zip -d living-future
       - uses: actions/setup-node@v4
         with:
           node-version: 22
