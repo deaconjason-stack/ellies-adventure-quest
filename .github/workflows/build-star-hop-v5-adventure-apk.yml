@@ -1,18 +1,19 @@
-name: Build Star Hop v5 Adventure APK
+name: Build Star Hop v6 Mission Challenge (Known Runner Path)
 
 on:
   push:
-    branches: [ star-hop-v5-adventure-apk ]
+    branches: [ star-hop-v6-mission-challenge-apk ]
     paths:
-      - 'star-hop-v5/**'
-      - 'star-hop-v5-android/**'
-      - '.github/workflows/build-star-hop-v5-adventure-apk.yml'
+      - 'star-hop-v6/**'
+      - 'star-hop-v6-android/**'
+      - '.github/workflows/build-star-hop-v6-mission-challenge.yml'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -33,46 +34,46 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Reassemble and verify Adventure Missions source
+      - name: Reassemble and verify v6 game
         shell: bash
         run: |
-          mkdir -p star-hop-v5-android/app/src/main/assets
-          cat             star-hop-v5/part00.b64             star-hop-v5/part01.b64             star-hop-v5/part02.b64             star-hop-v5/part03.b64             star-hop-v5/part04.b64             star-hop-v5/part05.b64             star-hop-v5/part06.b64             star-hop-v5/part07.b64             star-hop-v5/part08.b64             star-hop-v5/part09.b64             star-hop-v5/part10a.b64             star-hop-v5/part10b.b64             star-hop-v5/part10c0.b64             star-hop-v5/part10c1.b64             star-hop-v5/part10d0.b64             star-hop-v5/part10d1.b64             star-hop-v5/part11a.b64             star-hop-v5/part11b.b64             star-hop-v5/part11c.b64             > /tmp/starhop-v5.b64
-          base64 -d /tmp/starhop-v5.b64 > star-hop-v5-android/app/src/main/assets/starhop-v5.html
-          echo "2a4587c10db2944ecce1a1803ef38fb62a70b962c9ae06378fecfe8ed9ed1af9  star-hop-v5-android/app/src/main/assets/starhop-v5.html" | sha256sum -c -
+          mkdir -p star-hop-v6-android/app/src/main/assets
+          cat star-hop-v6/source.part*.b64gz > /tmp/starhop-v6.b64
+          base64 -d /tmp/starhop-v6.b64 > /tmp/starhop-v6.html.gz
+          gzip -dc /tmp/starhop-v6.html.gz > star-hop-v6-android/app/src/main/assets/starhop-v6.html
+          echo "4bc9712a4ed8cd451d14e3877e869b4310ffbd91a6f0a87f4c2865294844f39c  star-hop-v6-android/app/src/main/assets/starhop-v6.html" | sha256sum -c -
           python - <<'PY'
           from pathlib import Path
           import re
-          p = Path("star-hop-v5-android/app/src/main/assets/starhop-v5.html")
-          s = p.read_text(encoding="utf-8")
+          s = Path("star-hop-v6-android/app/src/main/assets/starhop-v6.html").read_text(encoding="utf-8")
           m = re.search(r"<script>([\s\S]*)</script>", s)
-          assert m, "Game script not found"
-          Path("/tmp/starhop-v5.js").write_text(m.group(1), encoding="utf-8")
+          assert m, "Game script missing"
+          Path("/tmp/starhop-v6.js").write_text(m.group(1), encoding="utf-8")
           PY
-          node --check /tmp/starhop-v5.js
+          node --check /tmp/starhop-v6.js
 
       - name: Build official Android APK
-        working-directory: star-hop-v5-android
+        working-directory: star-hop-v6-android
         run: gradle --no-daemon --stacktrace clean assembleDebug
 
       - name: Verify modern APK
         shell: bash
         run: |
-          APK="star-hop-v5-android/app/build/outputs/apk/debug/app-debug.apk"
+          APK="star-hop-v6-android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/v5-badging.txt
-          grep "package: name='com.medisyncd.starhopadventure'" /tmp/v5-badging.txt
-          grep "targetSdkVersion:'35'" /tmp/v5-badging.txt
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/v6-badging.txt
+          grep "package: name='com.medisyncd.starhopmission'" /tmp/v6-badging.txt
+          grep "targetSdkVersion:'35'" /tmp/v6-badging.txt
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
-          mkdir -p star-hop-v5-android/release
-          cp "$APK" star-hop-v5-android/release/Ellie-StarHop-v5-Adventure-Missions.apk
-          sha256sum star-hop-v5-android/release/Ellie-StarHop-v5-Adventure-Missions.apk > star-hop-v5-android/release/Ellie-StarHop-v5-Adventure-Missions.sha256.txt
+          mkdir -p star-hop-v6-android/release
+          cp "$APK" star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.apk
+          sha256sum star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.apk > star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.sha256.txt
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Ellie-StarHop-v5-Adventure-Missions
+          name: Ellie-StarHop-v6-Mission-Challenge
           path: |
-            star-hop-v5-android/release/Ellie-StarHop-v5-Adventure-Missions.apk
-            star-hop-v5-android/release/Ellie-StarHop-v5-Adventure-Missions.sha256.txt
+            star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.apk
+            star-hop-v6-android/release/Ellie-StarHop-v6-Mission-Challenge.sha256.txt
           if-no-files-found: error
           retention-days: 30
