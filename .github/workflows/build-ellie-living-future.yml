@@ -1,0 +1,84 @@
+name: Build Ellie Windows EXE and Android APK
+on:
+  push:
+    branches: [ living-future-build ]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack Ellie source
+        run: |
+          mkdir -p living-future
+          unzip -q living-future-build/ELLIE-The-Living-Future-build-source.zip -d living-future
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Add Android project
+        working-directory: living-future
+        run: npx cap add android
+      - name: Sync web app
+        working-directory: living-future
+        run: npx cap sync android
+      - name: Build APK
+        working-directory: living-future/android
+        run: chmod +x gradlew && ./gradlew assembleDebug
+      - name: Verify and rename APK
+        run: |
+          APK="living-future/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          cp "$APK" ELLIE-The-Living-Future-v0.1-Android.apk
+          sha256sum ELLIE-The-Living-Future-v0.1-Android.apk > ELLIE-The-Living-Future-v0.1-Android.sha256.txt
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ELLIE-The-Living-Future-Android-APK
+          path: |
+            ELLIE-The-Living-Future-v0.1-Android.apk
+            ELLIE-The-Living-Future-v0.1-Android.sha256.txt
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack Ellie source
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path living-future | Out-Null
+          Expand-Archive -Path living-future-build/ELLIE-The-Living-Future-build-source.zip -DestinationPath living-future -Force
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Build portable Windows EXE
+        working-directory: living-future
+        run: npm run build:win
+      - name: Hash EXE
+        shell: pwsh
+        run: |
+          $exe = "living-future/dist/ELLIE-The-Living-Future-0.1.0-Windows-x64.exe"
+          if (!(Test-Path $exe)) { throw "EXE not found" }
+          (Get-FileHash $exe -Algorithm SHA256).Hash + "  ELLIE-The-Living-Future-0.1.0-Windows-x64.exe" | Out-File -Encoding ascii "ELLIE-The-Living-Future-0.1.0-Windows-x64.sha256.txt"
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: ELLIE-The-Living-Future-Windows-EXE
+          path: |
+            living-future/dist/ELLIE-The-Living-Future-0.1.0-Windows-x64.exe
+            ELLIE-The-Living-Future-0.1.0-Windows-x64.sha256.txt
+          if-no-files-found: error
