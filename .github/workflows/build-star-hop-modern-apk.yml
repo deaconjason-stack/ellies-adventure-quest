@@ -1,0 +1,66 @@
+name: Build Star Hop Modern APK
+
+on:
+  push:
+    branches: [ star-hop-modern-apk-build ]
+    paths:
+      - 'star-hop-android-modern/**'
+      - '.github/workflows/build-star-hop-modern-apk.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Prepare Star Hop asset
+        shell: bash
+        run: |
+          mkdir -p /tmp/starhop-src star-hop-android-modern/app/src/main/assets
+          base64 -d star-hop-android-modern/source.zip.b64 > /tmp/starhop.zip
+          unzip -q /tmp/starhop.zip -d /tmp/starhop-src
+          test -s /tmp/starhop-src/app/src/main/assets/index.html
+          cp /tmp/starhop-src/app/src/main/assets/index.html star-hop-android-modern/app/src/main/assets/starhop.html
+
+      - name: Build official debug APK
+        working-directory: star-hop-android-modern
+        run: gradle --no-daemon --stacktrace clean assembleDebug
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          APK="star-hop-android-modern/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          mkdir -p star-hop-android-modern/release
+          cp "$APK" star-hop-android-modern/release/Ellie-StarHop-v4-Official-Android.apk
+          sha256sum star-hop-android-modern/release/Ellie-StarHop-v4-Official-Android.apk > star-hop-android-modern/release/Ellie-StarHop-v4-Official-Android.sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-StarHop-v4-Official-Android
+          path: |
+            star-hop-android-modern/release/Ellie-StarHop-v4-Official-Android.apk
+            star-hop-android-modern/release/Ellie-StarHop-v4-Official-Android.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
