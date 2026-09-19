@@ -119,4 +119,4 @@ jobs:
       - name: Compile for iPhone Simulator
         working-directory: living-future/ios
         run: |
-          xcodebuild -workspace App/App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project App/App.xcodeproj -scheme App -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
