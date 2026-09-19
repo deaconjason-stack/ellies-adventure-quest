@@ -32,14 +32,16 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Prepare Star Hop asset
+      - name: Reassemble verified Star Hop source
         shell: bash
         run: |
           mkdir -p /tmp/starhop-src star-hop-android-modern/app/src/main/assets
-          base64 -d star-hop-android-modern/source.zip.b64 > /tmp/starhop.zip
+          cat star-hop-android-modern/source.part*.b64 > /tmp/starhop.b64
+          base64 -d /tmp/starhop.b64 > /tmp/starhop.zip
+          echo "05493927474a6ae2fbbb0f041400607aec414d2954a8bba9b4e94e41b5d2ba72  /tmp/starhop.zip" | sha256sum -c -
           unzip -q /tmp/starhop.zip -d /tmp/starhop-src
-          test -s /tmp/starhop-src/app/src/main/assets/index.html
-          cp /tmp/starhop-src/app/src/main/assets/index.html star-hop-android-modern/app/src/main/assets/starhop.html
+          test -s /tmp/starhop-src/star-hop/index.html
+          cp /tmp/starhop-src/star-hop/index.html star-hop-android-modern/app/src/main/assets/starhop.html
 
       - name: Build official debug APK
         working-directory: star-hop-android-modern
@@ -50,7 +52,9 @@ jobs:
         run: |
           APK="star-hop-android-modern/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          grep "package: name='com.medisyncd.starhopgame'" /tmp/badging.txt
+          grep "targetSdkVersion:'35'" /tmp/badging.txt
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
           mkdir -p star-hop-android-modern/release
           cp "$APK" star-hop-android-modern/release/Ellie-StarHop-v4-Official-Android.apk
