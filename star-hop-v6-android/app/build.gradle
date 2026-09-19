@@ -1,0 +1,26 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.medisyncd.starhopmission'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.medisyncd.starhopmission'
+        minSdk 24
+        targetSdk 35
+        versionCode 60
+        versionName '6.0'
+    }
+
+    buildTypes {
+        debug {
+            debuggable true
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
