@@ -1,0 +1,64 @@
+name: Build Ellie Star Hop v4 APK
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'android-star-hop-v4/**'
+      - '.github/workflows/build-starhop-v4-apk.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-star-hop-v4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Unpack Ellie Star Hop v4
+        run: |
+          mkdir -p app/src/main/assets
+          base64 -d star-hop-v4.zip.b64 > star-hop-v4.zip
+          rm -rf /tmp/ellie-starhop
+          mkdir -p /tmp/ellie-starhop
+          unzip -q star-hop-v4.zip -d /tmp/ellie-starhop
+          cp -R /tmp/ellie-starhop/star-hop/. app/src/main/assets/
+          test -f app/src/main/assets/index.html
+
+      - name: Build debug APK
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Prepare APK
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Ellies-Star-Hop-v4-Engagement.apk
+          ls -lh Ellies-Star-Hop-v4-Engagement.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ellies-Star-Hop-v4-Engagement-APK
+          path: android-star-hop-v4/Ellies-Star-Hop-v4-Engagement.apk
+          if-no-files-found: error
