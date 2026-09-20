@@ -18,7 +18,7 @@ jobs:
         shell: bash
         run: |
           cat apps/ellie-paths-of-grace/source.b64.00               apps/ellie-paths-of-grace/source.b64.01               apps/ellie-paths-of-grace/source.b64.02               apps/ellie-paths-of-grace/source.b64.03               apps/ellie-paths-of-grace/source.b64.04               apps/ellie-paths-of-grace/source.b64.05               apps/ellie-paths-of-grace/source.b64.06               apps/ellie-paths-of-grace/source.b64.07.full | base64 -d > /tmp/ellie.zip
-          echo "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc  /tmp/ellie.zip" | sha256sum -c -
+          echo "91714f930cc244fd048edc8c907c75e611434d4ffe7d05d222a83cd2dcefa036  /tmp/ellie.zip" | sha256sum -c -
           mkdir -p /tmp/ellie-src
           unzip -q /tmp/ellie.zip -d /tmp/ellie-src
           echo "ELLIE_ROOT=/tmp/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
@@ -59,7 +59,7 @@ jobs:
           $b64 = ($parts | ForEach-Object { Get-Content $_ -Raw }) -join ""
           [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\ellie.zip",[Convert]::FromBase64String($b64))
           $hash = (Get-FileHash "$env:RUNNER_TEMP\ellie.zip" -Algorithm SHA256).Hash.ToLower()
-          if ($hash -ne "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc") { throw "Source checksum mismatch: $hash" }
+          if ($hash -ne "91714f930cc244fd048edc8c907c75e611434d4ffe7d05d222a83cd2dcefa036") { throw "Source checksum mismatch: $hash" }
           Expand-Archive "$env:RUNNER_TEMP\ellie.zip" "$env:RUNNER_TEMP\ellie-src" -Force
           "ELLIE_ROOT=$env:RUNNER_TEMP\ellie-src\Ellie-Paths-of-Grace-CrossPlatform" | Out-File -FilePath $env:GITHUB_ENV -Append
       - uses: actions/setup-node@v4
@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           cat apps/ellie-paths-of-grace/source.b64.00               apps/ellie-paths-of-grace/source.b64.01               apps/ellie-paths-of-grace/source.b64.02               apps/ellie-paths-of-grace/source.b64.03               apps/ellie-paths-of-grace/source.b64.04               apps/ellie-paths-of-grace/source.b64.05               apps/ellie-paths-of-grace/source.b64.06               apps/ellie-paths-of-grace/source.b64.07.full | base64 -d > /tmp/ellie.zip
-          echo "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc  /tmp/ellie.zip" | sha256sum -c -
+          echo "91714f930cc244fd048edc8c907c75e611434d4ffe7d05d222a83cd2dcefa036  /tmp/ellie.zip" | sha256sum -c -
           mkdir -p /tmp/ellie-src
           unzip -q /tmp/ellie.zip -d /tmp/ellie-src
           echo "ELLIE_ROOT=/tmp/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
@@ -111,7 +111,7 @@ jobs:
         shell: bash
         run: |
           cat apps/ellie-paths-of-grace/source.b64.00               apps/ellie-paths-of-grace/source.b64.01               apps/ellie-paths-of-grace/source.b64.02               apps/ellie-paths-of-grace/source.b64.03               apps/ellie-paths-of-grace/source.b64.04               apps/ellie-paths-of-grace/source.b64.05               apps/ellie-paths-of-grace/source.b64.06               apps/ellie-paths-of-grace/source.b64.07.full | base64 -d > "$RUNNER_TEMP/ellie.zip"
-          echo "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc  $RUNNER_TEMP/ellie.zip" | shasum -a 256 -c -
+          echo "91714f930cc244fd048edc8c907c75e611434d4ffe7d05d222a83cd2dcefa036  $RUNNER_TEMP/ellie.zip" | shasum -a 256 -c -
           mkdir -p "$RUNNER_TEMP/ellie-src"
           unzip -q "$RUNNER_TEMP/ellie.zip" -d "$RUNNER_TEMP/ellie-src"
           echo "ELLIE_ROOT=$RUNNER_TEMP/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
