@@ -109,7 +109,7 @@ g.write_text(x)
 
 m=Path("career-quest-v7-android/app/src/main/AndroidManifest.xml")
 mx=m.read_text()
-mx=mx.replace('android:label="Ellie\\'s Career Quest"','android:label="Ellie Career Quest AI"')
+mx=mx.replace("android:label=\"Ellie's Career Quest\"","android:label=\"Ellie Career Quest AI\"")
 m.write_text(mx)
 
 print("Ellie v7 OpenAI brain wired")
