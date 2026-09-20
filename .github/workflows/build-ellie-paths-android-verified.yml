@@ -25,30 +25,16 @@ jobs:
           root = Path("apps/ellie-paths-of-grace")
           target = "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc"
           prefix = "".join((root / f"source.b64.{i:02d}").read_text().strip() for i in range(7))
-          last = (root / "source.b64.07.full").read_text().strip()
-
-          def decoded(candidate):
-              try:
-                  data = base64.b64decode(prefix + candidate, validate=True)
-              except Exception:
-                  return None
-              return data if hashlib.sha256(data).hexdigest() == target else None
-
-          data = decoded(last)
-          fixed_at = None
-          if data is None:
-              for i in range(0, len(last) - 3):
-                  data = decoded(last[:i] + last[i+4:])
-                  if data is not None:
-                      fixed_at = i
-                      break
-
-          if data is None:
-              raise SystemExit("Could not reconstruct source to the verified SHA-256")
-
+          old_tail = (root / "source.b64.07.full").read_text().strip()
+          repaired_tail = old_tail[:2688] + "".join(
+              (root / f"source.b64.07.tail{i}").read_text().strip() for i in range(4)
+          )
+          data = base64.b64decode(prefix + repaired_tail, validate=True)
+          actual = hashlib.sha256(data).hexdigest()
+          print("Verified source SHA-256:", actual)
+          if actual != target:
+              raise SystemExit(f"Source checksum mismatch: {actual}")
           Path("/tmp/ellie.zip").write_bytes(data)
-          print("Verified source SHA-256:", hashlib.sha256(data).hexdigest())
-          print("Recovered insertion index:", fixed_at)
           PY
 
           rm -rf /tmp/ellie-src
