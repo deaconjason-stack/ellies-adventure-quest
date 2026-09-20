@@ -1,0 +1,89 @@
+name: Build Ellie Career Quest v6 Alive
+
+on:
+  push:
+    branches: [ ellie-career-quest-v6-alive ]
+    paths:
+      - 'career-quest-v6-build/**'
+      - '.github/workflows/build-ellie-career-quest-v6.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Prepare Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Reassemble proven v5 shell
+        shell: bash
+        run: |
+          cat career-quest-v5-build/source.part*.b64 > /tmp/ellie-v5.b64
+          base64 -d /tmp/ellie-v5.b64 > /tmp/ellie-v5.zip
+          unzip -t /tmp/ellie-v5.zip
+          rm -rf career-quest-v6-android
+          mkdir career-quest-v6-android
+          unzip -q /tmp/ellie-v5.zip -d career-quest-v6-android
+
+      - name: Inject Ellie Alive v6 brain
+        shell: bash
+        run: |
+          python career-quest-v6-build/upgrade.py
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path("career-quest-v6-android/app/src/main/assets/index.html").read_text()
+          m=re.search(r"<script>([\s\S]*)</script>",s)
+          assert m, "script missing"
+          Path("/tmp/ellie-v6.js").write_text(m.group(1))
+          assert "function rememberUser" in m.group(1)
+          assert "function memorySummary" in m.group(1)
+          assert "function careerFit" in m.group(1)
+          assert "ellieBrain" in m.group(1)
+          assert "=>" not in m.group(1)
+          PY
+          node --check /tmp/ellie-v6.js
+
+      - name: Build APK
+        working-directory: career-quest-v6-android
+        run: gradle --no-daemon --stacktrace clean assembleDebug
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          APK="career-quest-v6-android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          grep "package: name='com.medisyncd.elliecareer'" /tmp/badging.txt
+          grep "targetSdkVersion:'36'" /tmp/badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          unzip -t "$APK"
+          mkdir -p career-quest-v6-android/release
+          cp "$APK" career-quest-v6-android/release/Ellies-Career-Quest-v6-Ellie-Alive.apk
+          sha256sum career-quest-v6-android/release/Ellies-Career-Quest-v6-Ellie-Alive.apk > career-quest-v6-android/release/Ellies-Career-Quest-v6-Ellie-Alive.sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellies-Career-Quest-v6-Ellie-Alive
+          path: |
+            career-quest-v6-android/release/Ellies-Career-Quest-v6-Ellie-Alive.apk
+            career-quest-v6-android/release/Ellies-Career-Quest-v6-Ellie-Alive.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
