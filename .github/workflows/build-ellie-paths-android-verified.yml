@@ -1,0 +1,78 @@
+name: Build Ellie Paths Android Verified
+
+on:
+  push:
+    branches:
+      - ellie-paths-build
+    paths:
+      - 'apps/ellie-paths-of-grace/**'
+      - '.github/workflows/build-ellie-paths-android-verified.yml'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify and restore exact source
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+
+          root = Path("apps/ellie-paths-of-grace")
+          target = "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc"
+          prefix = "".join((root / f"source.b64.{i:02d}").read_text().strip() for i in range(7))
+          last = (root / "source.b64.07.full").read_text().strip()
+
+          def decoded(candidate):
+              try:
+                  data = base64.b64decode(prefix + candidate, validate=True)
+              except Exception:
+                  return None
+              return data if hashlib.sha256(data).hexdigest() == target else None
+
+          data = decoded(last)
+          fixed_at = None
+          if data is None:
+              for i in range(0, len(last) - 3):
+                  data = decoded(last[:i] + last[i+4:])
+                  if data is not None:
+                      fixed_at = i
+                      break
+
+          if data is None:
+              raise SystemExit("Could not reconstruct source to the verified SHA-256")
+
+          Path("/tmp/ellie.zip").write_bytes(data)
+          print("Verified source SHA-256:", hashlib.sha256(data).hexdigest())
+          print("Recovered insertion index:", fixed_at)
+          PY
+
+          rm -rf /tmp/ellie-src
+          mkdir -p /tmp/ellie-src
+          unzip -q /tmp/ellie.zip -d /tmp/ellie-src
+          echo "ELLIE_ROOT=/tmp/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build Android APK
+        run: gradle -p "$ELLIE_ROOT/android" :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: cp "$ELLIE_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" /tmp/Ellie-Paths-of-Grace-v2.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-Android-APK
+          path: /tmp/Ellie-Paths-of-Grace-v2.apk
+          if-no-files-found: error
