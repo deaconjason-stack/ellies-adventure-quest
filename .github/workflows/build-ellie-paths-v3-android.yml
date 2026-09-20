@@ -1,0 +1,56 @@
+name: Build Ellie Paths v3 Android
+
+on:
+  push:
+    branches:
+      - ellie-paths-build
+    paths:
+      - 'apps/ellie-paths-of-grace/v3-patch.tar.gz.b64'
+      - '.github/workflows/build-ellie-paths-v3-android.yml'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore verified v2 base
+        run: |
+          python apps/ellie-paths-of-grace/restore_source.py
+          echo "ELLIE_ROOT=$GITHUB_WORKSPACE/apps/ellie-paths-of-grace/restored/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+
+      - name: Apply verified v3 enhancement patch
+        shell: bash
+        run: |
+          base64 -d apps/ellie-paths-of-grace/v3-patch.tar.gz.b64 > /tmp/v3patch.tar.gz
+          echo "259d477a78ea2720dcc2ddd5c24e39374a2ab5c00a9de9adc2bc1250faee4d0d  /tmp/v3patch.tar.gz" | sha256sum -c -
+          mkdir -p /tmp/v3patch
+          tar -xzf /tmp/v3patch.tar.gz -C /tmp/v3patch
+          cp /tmp/v3patch/app.js "$ELLIE_ROOT/web/app.js"
+          cp /tmp/v3patch/index.html "$ELLIE_ROOT/web/index.html"
+          cp /tmp/v3patch/styles.css "$ELLIE_ROOT/web/styles.css"
+          cp /tmp/v3patch/app.js "$ELLIE_ROOT/android/app/src/main/assets/app.js"
+          cp /tmp/v3patch/index.html "$ELLIE_ROOT/android/app/src/main/assets/index.html"
+          cp /tmp/v3patch/styles.css "$ELLIE_ROOT/android/app/src/main/assets/styles.css"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build v3 Android APK
+        run: gradle -p "$ELLIE_ROOT/android" :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: cp "$ELLIE_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" /tmp/Ellie-Paths-of-Grace-v3-Enhanced.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-v3-Enhanced-APK
+          path: /tmp/Ellie-Paths-of-Grace-v3-Enhanced.apk
+          if-no-files-found: error
