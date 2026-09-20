@@ -1,0 +1,56 @@
+name: Build Ellie Paths v4 Android
+
+on:
+  push:
+    branches:
+      - ellie-paths-build
+    paths:
+      - 'apps/ellie-paths-of-grace/v4patch.*'
+      - '.github/workflows/build-ellie-paths-v4-android.yml'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore verified base
+        run: |
+          python apps/ellie-paths-of-grace/restore_source.py
+          echo "ELLIE_ROOT=$GITHUB_WORKSPACE/apps/ellie-paths-of-grace/restored/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+
+      - name: Apply v4 Living Paths patch
+        shell: bash
+        run: |
+          cat apps/ellie-paths-of-grace/v4patch.00               apps/ellie-paths-of-grace/v4patch.01               apps/ellie-paths-of-grace/v4patch.02               apps/ellie-paths-of-grace/v4patch.03               apps/ellie-paths-of-grace/v4patch.04 | base64 -d > /tmp/v4patch.tar.gz
+          echo "c1982f7b7feff8b27b5acee4ae4e7a68b04ecb23865fa3cac75bad28c7cc8957  /tmp/v4patch.tar.gz" | sha256sum -c -
+          rm -rf /tmp/v4patch && mkdir -p /tmp/v4patch
+          tar -xzf /tmp/v4patch.tar.gz -C /tmp/v4patch
+          cp /tmp/v4patch/app.js "$ELLIE_ROOT/web/app.js"
+          cp /tmp/v4patch/index.html "$ELLIE_ROOT/web/index.html"
+          cp /tmp/v4patch/styles.css "$ELLIE_ROOT/web/styles.css"
+          cp /tmp/v4patch/app.js "$ELLIE_ROOT/android/app/src/main/assets/app.js"
+          cp /tmp/v4patch/index.html "$ELLIE_ROOT/android/app/src/main/assets/index.html"
+          cp /tmp/v4patch/styles.css "$ELLIE_ROOT/android/app/src/main/assets/styles.css"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+
+      - name: Build v4 Android APK
+        run: gradle -p "$ELLIE_ROOT/android" :app:assembleDebug --stacktrace
+
+      - name: Prepare APK
+        run: cp "$ELLIE_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" /tmp/Ellie-Paths-of-Grace-v4-Living-Paths.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-v4-Living-Paths-APK
+          path: /tmp/Ellie-Paths-of-Grace-v4-Living-Paths.apk
+          if-no-files-found: error
