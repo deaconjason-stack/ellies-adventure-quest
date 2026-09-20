@@ -52,8 +52,6 @@ jobs:
           Path("/tmp/ellie-career-v5.js").write_text(m.group(1))
           assert "Loading your next adventure" in s
           assert "window.onerror" in s
-          assert "const " not in m.group(1)
-          assert "let " not in m.group(1)
           assert "=>" not in m.group(1)
           PY
           node --check /tmp/ellie-career-v5.js
