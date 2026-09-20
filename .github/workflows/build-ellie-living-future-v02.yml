@@ -1,0 +1,99 @@
+name: Build Ellie Living Future v0.2 EXE and APK
+on:
+  push:
+    branches: [ living-future-v02-build ]
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble enhanced source
+        shell: bash
+        run: |
+          cat living-future-v02/source.part*.b64 > /tmp/ellie-v02.b64
+          base64 -d /tmp/ellie-v02.b64 > /tmp/ellie-v02.zip
+          mkdir -p living-future
+          unzip -q /tmp/ellie-v02.zip -d living-future
+          node --check living-future/www/app.js
+          grep -q '"version": "0.2.0"' living-future/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Prepare Android SDK
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Add and sync Android
+        working-directory: living-future
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Build APK
+        working-directory: living-future/android
+        run: chmod +x gradlew && ./gradlew assembleDebug
+      - name: Verify and rename APK
+        shell: bash
+        run: |
+          APK="living-future/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          cp "$APK" ELLIE-The-Living-Future-v0.2-Enhanced-Android.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$APK"
+          sha256sum ELLIE-The-Living-Future-v0.2-Enhanced-Android.apk > ELLIE-The-Living-Future-v0.2-Enhanced-Android.sha256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ELLIE-The-Living-Future-v0.2-Enhanced-Android
+          path: |
+            ELLIE-The-Living-Future-v0.2-Enhanced-Android.apk
+            ELLIE-The-Living-Future-v0.2-Enhanced-Android.sha256.txt
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reassemble enhanced source
+        shell: pwsh
+        run: |
+          $parts = Get-ChildItem living-future-v02/source.part*.b64 | Sort-Object Name
+          $b64 = ($parts | ForEach-Object { Get-Content $_ -Raw }) -join ""
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\ellie-v02.zip", [Convert]::FromBase64String($b64))
+          New-Item -ItemType Directory -Force -Path living-future | Out-Null
+          Expand-Archive "$env:RUNNER_TEMP\ellie-v02.zip" -DestinationPath living-future -Force
+          node --check living-future/www/app.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        working-directory: living-future
+        run: npm install --no-audit --no-fund
+      - name: Build Windows EXE
+        working-directory: living-future
+        run: npm run build:win
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          $exe = "living-future/dist/ELLIE-The-Living-Future-0.2.0-Windows-x64.exe"
+          if (!(Test-Path $exe)) { throw "Enhanced EXE not found" }
+          Copy-Item $exe "ELLIE-The-Living-Future-v0.2-Enhanced-Windows.exe"
+          (Get-FileHash "ELLIE-The-Living-Future-v0.2-Enhanced-Windows.exe" -Algorithm SHA256).Hash + "  ELLIE-The-Living-Future-v0.2-Enhanced-Windows.exe" | Out-File -Encoding ascii "ELLIE-The-Living-Future-v0.2-Enhanced-Windows.sha256.txt"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ELLIE-The-Living-Future-v0.2-Enhanced-Windows
+          path: |
+            ELLIE-The-Living-Future-v0.2-Enhanced-Windows.exe
+            ELLIE-The-Living-Future-v0.2-Enhanced-Windows.sha256.txt
+          if-no-files-found: error
