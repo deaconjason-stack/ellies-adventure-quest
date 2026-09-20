@@ -1,0 +1,72 @@
+name: Build Ellie Career Quest v4 APK
+
+on:
+  push:
+    branches: [ ellie-career-quest-v4-apk ]
+    paths:
+      - 'career-quest-build/**'
+      - '.github/workflows/build-ellie-career-quest-v4.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Prepare Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Reassemble Android project
+        shell: bash
+        run: |
+          cat career-quest-build/source.part*.b64 > /tmp/ellie-career-source.b64
+          base64 -d /tmp/ellie-career-source.b64 > /tmp/ellie-career-source.zip
+          unzip -t /tmp/ellie-career-source.zip
+          rm -rf career-quest-android
+          mkdir -p career-quest-android
+          unzip -q /tmp/ellie-career-source.zip -d career-quest-android
+          test -f career-quest-android/app/src/main/assets/index.html
+          test -f career-quest-android/app/src/main/java/com/medisyncd/elliecareer/MainActivity.java
+
+      - name: Build Android APK
+        working-directory: career-quest-android
+        run: gradle --no-daemon --stacktrace clean assembleDebug
+
+      - name: Verify modern installable APK
+        shell: bash
+        run: |
+          APK="career-quest-android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/ellie-career-badging.txt
+          grep "package: name='com.medisyncd.elliecareer'" /tmp/ellie-career-badging.txt
+          grep "targetSdkVersion:'36'" /tmp/ellie-career-badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          mkdir -p career-quest-android/release
+          cp "$APK" career-quest-android/release/Ellies-Career-Quest-v4.apk
+          sha256sum career-quest-android/release/Ellies-Career-Quest-v4.apk > career-quest-android/release/Ellies-Career-Quest-v4.sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellies-Career-Quest-v4-APK
+          path: |
+            career-quest-android/release/Ellies-Career-Quest-v4.apk
+            career-quest-android/release/Ellies-Career-Quest-v4.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
