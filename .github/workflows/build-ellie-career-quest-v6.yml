@@ -71,7 +71,7 @@ jobs:
           APK="career-quest-v6-android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
-          grep "package: name='com.medisyncd.elliecareer'" /tmp/badging.txt
+          grep "package: name='com.medisyncd.elliecareer.alive'" /tmp/badging.txt
           grep "targetSdkVersion:'36'" /tmp/badging.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
           unzip -t "$APK"
