@@ -97,3 +97,5 @@ jobs:
             ELLIE-The-Living-Future-v0.2-Enhanced-Windows.exe
             ELLIE-The-Living-Future-v0.2-Enhanced-Windows.sha256.txt
           if-no-files-found: error
+
+# Trigger enhanced v0.2 compile
