@@ -1,0 +1,93 @@
+name: Build Ellie Paths Desktop Verified
+
+on:
+  push:
+    branches:
+      - ellie-paths-build
+    paths:
+      - 'apps/ellie-paths-of-grace/**'
+      - '.github/workflows/build-ellie-paths-desktop-verified.yml'
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore verified source
+        shell: pwsh
+        run: |
+          python apps/ellie-paths-of-grace/restore_source.py
+          $root = Join-Path $env:GITHUB_WORKSPACE "apps\ellie-paths-of-grace\restored\Ellie-Paths-of-Grace-CrossPlatform"
+          "ELLIE_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Windows portable
+        shell: pwsh
+        run: |
+          Set-Location "$env:ELLIE_ROOT"
+          npm install --no-audit --no-fund
+          npx electron-builder --win portable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-Windows
+          path: ${{ env.ELLIE_ROOT }}/dist/*.exe
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore verified source
+        shell: bash
+        run: |
+          python apps/ellie-paths-of-grace/restore_source.py
+          echo "ELLIE_ROOT=$GITHUB_WORKSPACE/apps/ellie-paths-of-grace/restored/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Linux AppImage
+        run: |
+          cd "$ELLIE_ROOT"
+          npm install --no-audit --no-fund
+          npx electron-builder --linux AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-Linux
+          path: ${{ env.ELLIE_ROOT }}/dist/*.AppImage
+          if-no-files-found: error
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore verified source
+        shell: bash
+        run: |
+          python apps/ellie-paths-of-grace/restore_source.py
+          echo "ELLIE_ROOT=$GITHUB_WORKSPACE/apps/ellie-paths-of-grace/restored/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build macOS zip
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          cd "$ELLIE_ROOT"
+          npm install --no-audit --no-fund
+          npx electron-builder --mac zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-macOS
+          path: ${{ env.ELLIE_ROOT }}/dist/*.zip
+          if-no-files-found: error
