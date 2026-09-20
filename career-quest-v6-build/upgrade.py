@@ -41,6 +41,8 @@ p.write_text(s,encoding="utf-8")
 g=Path("career-quest-v6-android/app/build.gradle")
 x=g.read_text()
 x=x.replace("versionCode 5","versionCode 6").replace('versionName "5.0.0"','versionName "6.0.0"')
+x=x.replace("applicationId 'com.medisyncd.elliecareer'","applicationId 'com.medisyncd.elliecareer.alive'")
+x=x.replace("versionName '5.0.1'","versionName '6.0.0'")
 g.write_text(x)
 
 print("Ellie v6 brain injected")
