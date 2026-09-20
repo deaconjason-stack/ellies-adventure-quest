@@ -1,0 +1,132 @@
+name: Build Ellie Paths of Grace
+
+on:
+  push:
+    branches:
+      - ellie-paths-build
+    paths:
+      - 'apps/ellie-paths-of-grace/**'
+      - '.github/workflows/build-ellie-paths-of-grace.yml'
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore source
+        shell: bash
+        run: |
+          cat apps/ellie-paths-of-grace/source.b64.00               apps/ellie-paths-of-grace/source.b64.01               apps/ellie-paths-of-grace/source.b64.02               apps/ellie-paths-of-grace/source.b64.03               apps/ellie-paths-of-grace/source.b64.04               apps/ellie-paths-of-grace/source.b64.05               apps/ellie-paths-of-grace/source.b64.06               apps/ellie-paths-of-grace/source.b64.07.full | base64 -d > /tmp/ellie.zip
+          echo "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc  /tmp/ellie.zip" | sha256sum -c -
+          mkdir -p /tmp/ellie-src
+          unzip -q /tmp/ellie.zip -d /tmp/ellie-src
+          echo "ELLIE_ROOT=/tmp/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Build Android APK
+        run: gradle -p "$ELLIE_ROOT/android" :app:assembleDebug --stacktrace
+      - name: Name APK
+        run: cp "$ELLIE_ROOT/android/app/build/outputs/apk/debug/app-debug.apk" "$RUNNER_TEMP/Ellie-Paths-of-Grace-v2.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-Android-APK
+          path: ${{ runner.temp }}/Ellie-Paths-of-Grace-v2.apk
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore source
+        shell: pwsh
+        run: |
+          $parts = @(
+            "apps/ellie-paths-of-grace/source.b64.00",
+            "apps/ellie-paths-of-grace/source.b64.01",
+            "apps/ellie-paths-of-grace/source.b64.02",
+            "apps/ellie-paths-of-grace/source.b64.03",
+            "apps/ellie-paths-of-grace/source.b64.04",
+            "apps/ellie-paths-of-grace/source.b64.05",
+            "apps/ellie-paths-of-grace/source.b64.06",
+            "apps/ellie-paths-of-grace/source.b64.07.full"
+          )
+          $b64 = ($parts | ForEach-Object { Get-Content $_ -Raw }) -join ""
+          [IO.File]::WriteAllBytes("$env:RUNNER_TEMP\ellie.zip",[Convert]::FromBase64String($b64))
+          $hash = (Get-FileHash "$env:RUNNER_TEMP\ellie.zip" -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc") { throw "Source checksum mismatch: $hash" }
+          Expand-Archive "$env:RUNNER_TEMP\ellie.zip" "$env:RUNNER_TEMP\ellie-src" -Force
+          "ELLIE_ROOT=$env:RUNNER_TEMP\ellie-src\Ellie-Paths-of-Grace-CrossPlatform" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build Windows portable
+        shell: pwsh
+        run: |
+          Set-Location "$env:ELLIE_ROOT"
+          npm install --no-audit --no-fund
+          npx electron-builder --win portable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-Windows
+          path: ${{ env.ELLIE_ROOT }}/dist/*.exe
+          if-no-files-found: error
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore source
+        shell: bash
+        run: |
+          cat apps/ellie-paths-of-grace/source.b64.00               apps/ellie-paths-of-grace/source.b64.01               apps/ellie-paths-of-grace/source.b64.02               apps/ellie-paths-of-grace/source.b64.03               apps/ellie-paths-of-grace/source.b64.04               apps/ellie-paths-of-grace/source.b64.05               apps/ellie-paths-of-grace/source.b64.06               apps/ellie-paths-of-grace/source.b64.07.full | base64 -d > /tmp/ellie.zip
+          echo "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc  /tmp/ellie.zip" | sha256sum -c -
+          mkdir -p /tmp/ellie-src
+          unzip -q /tmp/ellie.zip -d /tmp/ellie-src
+          echo "ELLIE_ROOT=/tmp/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build Linux AppImage
+        run: |
+          cd "$ELLIE_ROOT"
+          npm install --no-audit --no-fund
+          npx electron-builder --linux AppImage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-Linux
+          path: ${{ env.ELLIE_ROOT }}/dist/*.AppImage
+          if-no-files-found: error
+
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore source
+        shell: bash
+        run: |
+          cat apps/ellie-paths-of-grace/source.b64.00               apps/ellie-paths-of-grace/source.b64.01               apps/ellie-paths-of-grace/source.b64.02               apps/ellie-paths-of-grace/source.b64.03               apps/ellie-paths-of-grace/source.b64.04               apps/ellie-paths-of-grace/source.b64.05               apps/ellie-paths-of-grace/source.b64.06               apps/ellie-paths-of-grace/source.b64.07.full | base64 -d > "$RUNNER_TEMP/ellie.zip"
+          echo "50c9bc778c3c68745b779bd9f26c3be9d70398d7a3a3ff41ff626db41cebb9bc  $RUNNER_TEMP/ellie.zip" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/ellie-src"
+          unzip -q "$RUNNER_TEMP/ellie.zip" -d "$RUNNER_TEMP/ellie-src"
+          echo "ELLIE_ROOT=$RUNNER_TEMP/ellie-src/Ellie-Paths-of-Grace-CrossPlatform" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build macOS zip
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          cd "$ELLIE_ROOT"
+          npm install --no-audit --no-fund
+          npx electron-builder --mac zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellie-Paths-of-Grace-macOS
+          path: ${{ env.ELLIE_ROOT }}/dist/*.zip
+          if-no-files-found: error
