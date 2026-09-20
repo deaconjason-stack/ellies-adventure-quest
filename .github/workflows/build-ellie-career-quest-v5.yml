@@ -1,0 +1,86 @@
+name: Build Ellie Career Quest v5 White Screen Fix
+
+on:
+  push:
+    branches: [ ellie-career-quest-v5-whitescreen-fix ]
+    paths:
+      - 'career-quest-v5-build/**'
+      - '.github/workflows/build-ellie-career-quest-v5.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.0'
+
+      - name: Prepare Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | sort -V | tail -1)"
+          test -x "$SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Reassemble and validate fixed source
+        shell: bash
+        run: |
+          cat career-quest-v5-build/source.part*.b64 > /tmp/ellie-career-v5.b64
+          base64 -d /tmp/ellie-career-v5.b64 > /tmp/ellie-career-v5.zip
+          echo "7264f9524086bf57830cc8190ced24b092c8f4f91cdd72ab9d83912f814adfd6  /tmp/ellie-career-v5.zip" | sha256sum -c -
+          unzip -t /tmp/ellie-career-v5.zip
+          rm -rf career-quest-v5-android
+          mkdir career-quest-v5-android
+          unzip -q /tmp/ellie-career-v5.zip -d career-quest-v5-android
+          test -f career-quest-v5-android/app/src/main/assets/index.html
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          s=Path("career-quest-v5-android/app/src/main/assets/index.html").read_text()
+          m=re.search(r"<script>([\s\S]*)</script>",s)
+          assert m, "script missing"
+          Path("/tmp/ellie-career-v5.js").write_text(m.group(1))
+          assert "Loading your next adventure" in s
+          assert "window.onerror" in s
+          assert "const " not in m.group(1)
+          assert "let " not in m.group(1)
+          assert "=>" not in m.group(1)
+          PY
+          node --check /tmp/ellie-career-v5.js
+
+      - name: Build APK
+        working-directory: career-quest-v5-android
+        run: gradle --no-daemon --stacktrace clean assembleDebug
+
+      - name: Verify installable modern APK
+        shell: bash
+        run: |
+          APK="career-quest-v5-android/app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          grep "package: name='com.medisyncd.elliecareer'" /tmp/badging.txt
+          grep "targetSdkVersion:'36'" /tmp/badging.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          unzip -t "$APK"
+          mkdir -p career-quest-v5-android/release
+          cp "$APK" career-quest-v5-android/release/Ellies-Career-Quest-v5-WhiteScreenFix.apk
+          sha256sum career-quest-v5-android/release/Ellies-Career-Quest-v5-WhiteScreenFix.apk > career-quest-v5-android/release/Ellies-Career-Quest-v5-WhiteScreenFix.sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Ellies-Career-Quest-v5-WhiteScreenFix
+          path: |
+            career-quest-v5-android/release/Ellies-Career-Quest-v5-WhiteScreenFix.apk
+            career-quest-v5-android/release/Ellies-Career-Quest-v5-WhiteScreenFix.sha256.txt
+          if-no-files-found: error
+          retention-days: 30
