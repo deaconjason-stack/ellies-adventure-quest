@@ -34,3 +34,17 @@ test('index loads progression mastery and UI model before app',()=>{
 test('Ellie feedback is announced accessibly',()=>{
   assert.match(app(),/aria-live="polite"/);
 });
+
+test('quiz retry flow uses rotated order and an explicit retry action',()=>{
+  assert.match(app(),/orderedQuiz\(/);
+  assert.match(app(),/data-quiz-retry/);
+});
+
+test('resources are selected through week-aware support gating',()=>{
+  assert.match(app(),/supportResources\(/);
+});
+
+test('mastery completion from quiz or practical evidence refreshes the week UI',()=>{
+  const source=app();
+  assert.ok((source.match(/setTimeout\(render,250\)/g)||[]).length>=2);
+});
