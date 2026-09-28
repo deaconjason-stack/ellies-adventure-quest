@@ -104,3 +104,13 @@ test('optional teach-back review cannot revoke an earlier pass',()=>{
   s=P.recordTeachBackResult(s,'01',{passed:false,matchedConcepts:[],missingConcepts:['sequence']},'2026-09-27T12:05:00Z');
   assert.equal(s.mastery['01'].teachBackComplete,true);
 });
+
+test('optional practical review preserves previously saved mastery evidence',()=>{
+  let s=P.createDefaultV2('2026-09-27');
+  s=P.recordPracticalEvidence(s,'01',{built:'rocket',tested:'three moves',challenge:'drift',solution:'fixed sequence'});
+  s=P.recordPracticalEvidence(s,'01',{built:'',tested:'',challenge:'',solution:''});
+  assert.equal(s.questLog['01'].built,'rocket');
+  assert.equal(s.questLog['01'].tested,'three moves');
+  assert.equal(s.questLog['01'].challenge,'drift');
+  assert.equal(s.questLog['01'].solution,'fixed sequence');
+});
