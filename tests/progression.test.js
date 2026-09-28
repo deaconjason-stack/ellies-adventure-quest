@@ -47,3 +47,60 @@ test('mastery gate stops catch-up at the earliest unmastered week', () => {
   assert.equal(e.currentEligibleWeek,3);
   assert.deepEqual(e.accessibleMissionIds,['01','02','03']);
 });
+
+test('migrateV1 preserves learning data without trusting manual completion', () => {
+  const legacy={version:1,path:'commander',completed:['01','02','99'],quizScores:{'01':90,'02':105,'99':100},questLog:{'01':{built:'rocket'}},capstone:{item0:true},prefs:{theme:'dark',largeText:true}};
+  const s=P.migrateV1(legacy,'2026-09-27');
+  assert.equal(s.version,2);
+  assert.equal(s.path,'commander');
+  assert.equal(s.prefs.theme,'dark');
+  assert.equal(s.prefs.largeText,true);
+  assert.equal(s.questLog['01'].built,'rocket');
+  assert.equal(s.mastery['01'].quizBest,90);
+  assert.equal(s.mastery['02'].quizBest,100);
+  assert.equal(s.mastery['01'].legacyCompleted,true);
+  assert.notEqual(s.mastery['01'].status,'mastered');
+  assert.equal(s.mastery['99'],undefined);
+  assert.equal(s.enrollment.startDate,'2026-09-27');
+  assert.equal(s.enrollment.highestScheduledWeekSeen,1);
+});
+
+test('sanitizeV2 repairs corrupt state without inventing mastery', () => {
+  const s=P.sanitizeV2({version:2,path:'hacker',enrollment:{startDate:'bad',highestScheduledWeekSeen:99},mastery:{'01':{status:'mastered',quizBest:'nope',practicalComplete:true,teachBackComplete:true}},prefs:{theme:'purple'}},'2026-09-27');
+  assert.equal(s.path,'voyager');
+  assert.equal(s.enrollment.startDate,'2026-09-27');
+  assert.equal(s.enrollment.highestScheduledWeekSeen,14);
+  assert.equal(s.mastery['01'].status,'in-progress');
+  assert.equal(s.mastery['01'].quizBest,0);
+  assert.equal(s.prefs.theme,'system');
+});
+
+test('createDefaultV2 creates a private account-free week 1 enrollment', () => {
+  const s=P.createDefaultV2('2026-09-27');
+  assert.equal(s.version,2);
+  assert.equal(s.path,'voyager');
+  assert.equal(s.enrollment.startDate,'2026-09-27');
+  assert.equal(s.enrollment.highestScheduledWeekSeen,1);
+  assert.deepEqual(s.mastery,{});
+});
+
+test('sanitizeV2 rejects impossible calendar dates',()=>{
+  const s=P.sanitizeV2({version:2,enrollment:{startDate:'2026-99-99',highestScheduledWeekSeen:1}},'2026-09-27');
+  assert.equal(s.enrollment.startDate,'2026-09-27');
+});
+
+test('optional review cannot revoke earned practical completion',()=>{
+  let s=P.createDefaultV2('2026-09-27');
+  s=P.recordPracticalEvidence(s,'01',{built:'x',tested:'x',challenge:'x',solution:'x'});
+  assert.equal(s.mastery['01'].practicalComplete,true);
+  s=P.recordPracticalEvidence(s,'01',{built:'',tested:'',challenge:'',solution:''});
+  assert.equal(s.mastery['01'].practicalComplete,true);
+});
+
+test('optional teach-back review cannot revoke an earlier pass',()=>{
+  let s=P.createDefaultV2('2026-09-27');
+  s=P.recordTeachBackResult(s,'01',{passed:true,matchedConcepts:['sequence'],missingConcepts:[]},'2026-09-27T12:00:00Z');
+  assert.equal(s.mastery['01'].teachBackComplete,true);
+  s=P.recordTeachBackResult(s,'01',{passed:false,matchedConcepts:[],missingConcepts:['sequence']},'2026-09-27T12:05:00Z');
+  assert.equal(s.mastery['01'].teachBackComplete,true);
+});
