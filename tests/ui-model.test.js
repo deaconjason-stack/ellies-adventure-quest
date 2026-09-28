@@ -29,3 +29,18 @@ test('dashboard points to the current eligible week and next missing requirement
   assert.equal(d.title,'Title 1');
   assert.match(d.nextRequirement,/lesson|build|quiz|teach/i);
 });
+
+test('quiz retakes rotate question order without changing the question set',()=>{
+  const quiz=['a','b','c','d','e'];
+  const first=U.orderedQuiz(quiz,0);
+  const retry=U.orderedQuiz(quiz,1);
+  assert.deepEqual(first.map(x=>x.question),quiz);
+  assert.notDeepEqual(retry.map(x=>x.question),first.map(x=>x.question));
+  assert.deepEqual(retry.map(x=>x.question).sort(),[...quiz].sort());
+  assert.deepEqual(retry.map(x=>x.originalIndex).sort((a,b)=>a-b),[0,1,2,3,4]);
+});
+
+test('future-week support resources stay hidden until their week is reached',()=>{
+  assert.equal(U.supportResources(1).some(x=>x.id==='debugging'),false);
+  assert.equal(U.supportResources(7).some(x=>x.id==='debugging'),true);
+});
