@@ -1,0 +1,28 @@
+name: Mastery v2 tests
+
+on:
+  push:
+    branches:
+      - feature/week-lock-mastery-ellie
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run automated tests
+        run: npm test
+      - name: Check JavaScript syntax
+        run: |
+          node --check assets/progression.js
+          node --check assets/mastery-data.js
+          node --check assets/ui-model.js
+          node --check assets/app.js
