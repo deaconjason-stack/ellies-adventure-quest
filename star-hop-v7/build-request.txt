@@ -1,0 +1,2 @@
+Build Ellie Star Hop v7 — Star Grid Quest.
+Purpose: distinct mission gameplay, side objectives, 1–3 star mastery, campaign unlocks, permanent upgrades, rescue/delivery/switch/boss interactions, and slower readable gameplay.
